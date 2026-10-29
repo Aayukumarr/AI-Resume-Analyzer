@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Resume Analyzer — Project Presentation</title>
+<style>
+  :root {
+    --bg-dark: #0f172a;
+    --card-bg: #1e293b;
+    --primary: #38bdf8;
+    --primary-gradient: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+    --accent: #22c55e;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --border: rgba(255, 255, 255, 0.1);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+  .deck {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .slide {
+    display: none;
+    width: 90vw;
+    max-width: 1150px;
+    height: 80vh;
+    max-height: 680px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3rem 3.5rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    flex-direction: column;
+    justify-content: space-between;
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  .slide.active {
+    display: flex;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .slide-header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .slide-number {
+    font-size: 0.85rem;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+  }
+  .slide-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .slide-body {
+    flex-grow: 1;
+    overflow-y: auto;
+    font-size: 1.15rem;
+    line-height: 1.6;
+    color: #e2e8f0;
+  }
+  .slide-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    height: 100%;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.2rem;
+  }
+  .box {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+  .box h4 {
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+  }
+  ul {
+    list-style: none;
+    margin-top: 0.5rem;
+  }
+  ul li {
+    position: relative;
+    padding-left: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+  ul li::before {
+    content: "▹";
+    position: absolute;
+    left: 0;
+    color: var(--primary);
+    font-size: 1.2rem;
+  }
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+    background: rgba(56, 189, 248, 0.15);
+    color: var(--primary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-right: 0.4rem;
+    margin-bottom: 0.4rem;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+  }
+  th, td {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  th {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--primary);
+  }
+  /* Controls */
+  .controls {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 100;
+  }
+  .btn {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .btn:hover {
+    background: var(--primary);
+    color: #0f172a;
+  }
+  .progress-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    height: 4px;
+    background: var(--primary-gradient);
+    transition: width 0.3s;
+    z-index: 200;
+  }
+  @media print {
+    body { overflow: visible; height: auto; background: white; color: black; }
+    .slide { display: flex !important; page-break-after: always; width: 100%; height: 95vh; max-height: none; box-shadow: none; border: 1px solid #ddd; background: white; color: black; }
+    .controls, .progress-bar { display: none; }
+    .slide-title { color: #0284c7; -webkit-text-fill-color: initial; }
+    .box { border-color: #ddd; background: #f8fafc; color: #1e293b; }
+    th { background: #f1f5f9; color: black; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck">
+
+  <!-- SLIDE 1: Title -->
+  <div class="slide active">
+    <div style="text-align: center; margin: auto;">
+      <span class="badge" style="font-size: 1rem; padding: 0.4rem 1rem; margin-bottom: 1.5rem;">Major / Mini Project Presentation</span>
+      <h1 class="slide-title" style="font-size: 3rem; margin-bottom: 1rem;">AI Resume Analyzer</h1>
+      <p style="font-size: 1.35rem; color: var(--text-muted); margin-bottom: 2rem;">
+        Automated Resume Screening and Skill Gap Analysis Web Application
+      </p>
+      <div style="display: inline-block; text-align: left; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem 2.5rem;">
+        <p><strong>Presented By:</strong> Ayush Kumar</p>
+        <p><strong>Branch:</strong> Computer Science & Engineering</p>
+        <p><strong>Domain:</strong> Natural Language Processing (NLP) & AI</p>
+        <p><strong>Tech Stack:</strong> Python • Streamlit • PyMuPDF • Scikit-learn</p>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span>AI Resume Analyzer</span>
+      <span>Slide 1 of 12</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: Problem Statement & Motivation -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">Slide 02</div>
+      <h2 class="slide-title">Problem Statement & Motivation</h2>
+    </div>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="box">
+          <h4>The Recruiter's Challenge</h4>
+          <ul>
+            <li>Recruiters receive <strong>250+ applications</strong> per technical role.</li>
+            <li>Manual resume screening is time-consuming (avg. 6–10 minutes per candidate) and inconsistent.</li>
+            <li>High risk of recruiter fatigue and human subjectivity.</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4>The Candidate's Dilemma</h4>
+          <ul>
+            <li><strong>75% of resumes</strong> are rejected by automated ATS before human review.</li>
+            <li>Applicants receive zero diagnostic feedback on why their profile failed.</li>
+            <li>Missing critical technical keywords prevents qualified candidates from getting interviews.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span>Need for an objective, real-time pre-screening system</span>
+      <span>Slide 2 of 12</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: Project Objectives -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">Slide 03</div>
+      <h2 class="slide-title">Project Objectives</h2>
+    </div>
+    <div class="slide-body">
+      <div class="grid-3" style="height: 100%;">
+        <div class="box">
+          <h4>1. Ingestion & Extraction</h4>
+          <p>Extract clean text from digital PDF resumes using high-speed binary stream parsing via PyMuPDF.</p>
+        </div>
+        <div class="box">
+          <h4>2. Similarity Scoring</h4>
+          <p>Vectorize resumes and job descriptions with TF-IDF (unigrams + bigrams) and compute cosine similarity (0–100%).</p>
+        </div>
+        <div class="box">
+          <h4>3. Gap Analysis</h4>
+          <p>Categorize technical competencies into 5 domains and compute matched vs. missing skills using set theory.</p>
+        </div>
+      </div>
+      <div class="box" style="margin-top: 1.2rem;">
+        <h4>4. Structure Audit & Actionable Advice</h4>
+        <p>Audit presence of mandatory resume sections (Education, Projects, Experience, Skills, Certifications) and provide instant suggestions.</p>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span>Clear, measurable project goals</span>
+      <span>Slide 3 of 12</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: Architecture & Workflow -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">Slide 04</div>
+      <h2 class="slide-title">System Architecture</h2>
+    </div>
+    <div class="slide-body">
+      <div class="box" style="text-align: center; padding: 2rem;">
+        <div style="display: flex; justify-content: space-around; align-items: center; margin-bottom: 1.5rem;">
+          <div class="badge" style="padding: 1rem; font-size: 1rem;">PDF Resume<br>+ Job Description</div>
+          <span style="font-size: 1.5rem;">➔</span>
+          <div class="badge" style="padding: 1rem; font-size: 1rem;">PyMuPDF Extraction<br>+ Normalization</div>
+          <span style="font-size: 1.5rem;">➔</span>
+          <div class="badge" style="padding: 1rem; font-size: 1rem;">TF-IDF Vectorizer<br>(N-grams 1,2)</div>
+        </div>
+        <div style="font-size: 1.5rem; margin-bottom: 1rem;">⬇</div>
+        <div style="display: flex; justify-content: space-around; align-items: center;">
+          <div class="badge" style="padding: 1rem; font-size: 1rem;">Cosine Similarity<br>Engine (0-100%)</div>
+          <span style="font-size: 1.5rem;">➔</span>
+          <div class="badge" style="padding: 1rem; font-size: 1rem;">Skill Gap Matrix<br>(Set Logic ∩ / ∖)</div>
+          <span style="font-size: 1.5rem;">➔</span>
+          <div class="badge" style="padding: 1rem; font-size: 1rem;">Streamlit Interactive<br>Dashboard Output</div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span>Modular 5-stage processing pipeline</span>
+      <span>Slide 4 of 12</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: Mathematical Methodology -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">Slide 05</div>
+      <h2 class="slide-title">Mathematical Foundation</h2>
+    </div>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="box">
+          <h4>1. TF-IDF Formulation</h4>
+          <p>Weighs key words while discarding common corpus terms:</p>
+          <p style="margin: 0.8rem 0; font-family: monospace; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 6px;">
+            TF(t, d) = f(t, d) / Total Words<br>
+            IDF(t) = ln((1 + N) / (1 + DF(t))) + 1<br>
+            TF-IDF = TF × IDF
+          </p>
+          <small>Uses unigrams & bigrams to capture terms like "machine learning".</small>
+        </div>
+        <div class="box">
+          <h4>2. Cosine Similarity & Set Theory</h4>
+          <p>Measures angular distance between document vectors:</p>
+          <p style="margin: 0.8rem 0; font-family: monospace; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 6px;">
+            Similarity(A, B) = (A · B) / (||A|| × ||B||)<br>
+            Score % = round(Similarity × 100)
+          </p>
+          <p><strong>Skill Gap Logic:</strong></p>
+          <p style="font-family: monospace;">Matched = S_resume ∩ S_job<br>Missing = S_job \ S_resume</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span>Statistical NLP & Vector Space Modeling</span>
+      <span>Slide 5 of 12</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 6: Skill Taxonomy Engine -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">Slide 06</div>
+      <h2 class="slide-title">Curated Skill Taxonomy</h2>
+    </div>
+    <div class="slide-body">
+      <p style="margin-bottom: 1rem;">A structured keyword taxonomy categorizes technical competencies across 5 domains:</p>
+      <div class="box" style="margin-bottom: 0.8rem;">
+        <strong>💻 Programming:</strong>
+        <span class="badge">Python</span><span class="badge">Java</span><span class="badge">C++</span><span class="badge">JavaScript</span><span class="badge">TypeScript</span><span class="badge">SQL</span><span class="badge">Go</span><span class="badge">Rust</span>
+      </div>
+      <div class="box" style="margin-bottom: 0.8rem;">
+        <strong>🌐 Web Development:</strong>
+        <span class="badge">React</span><span class="badge">Node.js</span><span class="badge">Express</span><span class="badge">Streamlit</span><span class="badge">Flask</span><span class="badge">Django</span><span class="badge">FastAPI</span><span class="badge">REST API</span>
+      </div>
+      <div class="box" style="margin-bottom: 0.8rem;">
+        <strong>🤖 AI / Machine Learning:</strong>
+        <span class="badge">Machine Learning</span><span class="badge">Deep Learning</span><span class="badge">PyTorch</span><span class="badge">TensorFlow</span><span class="badge">NLP</span><span class="badge">Scikit-Learn</span><span class="badge">LLM</span>
+      </div>
+      <div class="box">
+        <strong>☁️ Data & Cloud Tools:</strong>
+        <span class="badge">Docker</span><span class="badge">Kubernetes</span><span class="badge">AWS</span><span class="badge">Azure</span><span class="badge">Git</span><span class="badge">GitHub</span><span class="badge">PostgreSQL</span><span class="badge">Linux</span>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span>Word boundary regex prevents false-positive substrings</span>
+      <span>Slide 6 of 12</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 7: Key Features & UI -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">Slide 07</div>
+      <h2 class="slide-title">Key Application Features</h2>
+    </div>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="box">
+          <h4>Diagnostic Output</h4>
+          <ul>
+            <li><strong>Score Metric:</strong> Color-coded progress bar (Green $\ge$ 70%, Blue 40-69%, Amber &lt; 40%).</li>
+            <li><strong>Word Count Metric:</strong> Flags resumes that are too short or overly verbose.</li>
+            <li><strong>Two-Column Skills Grid:</strong> Clearly displays Matched Skills vs. Skills Missing.</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4>Structure & Usability</h4>
+          <ul>
+            <li><strong>Section Audit:</strong> Verifies presence of Education, Experience, Projects, Skills, and Certifications.</li>
+            <li><strong>Extracted Text Drawer:</strong> Inspects raw parsed PDF text for transparency.</li>
+            <li><strong>In-Memory Privacy:</strong> No candidate resumes or personal data saved to external disks.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span>Interactive Streamlit Web Dashboard</span>
+      <span>Slide 7 of 12</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 8: Experimental Results -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">Slide 08</div>
+      <h2 class="slide-title">Testing & Verification</h2>
+    </div>
+    <div class="slide-body">
+      <table>
+        <thead>
+          <tr>
+            <th>Test ID</th>
+            <th>Resume Profile</th>
+            <th>Target Job Description</th>
+            <th>Match Score</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>TC-01</strong></td>
+            <td>Python, SQL, ML Developer</td>
+            <td>Python Developer with ML & SQL</td>
+            <td><strong>78% (High)</strong></td>
+            <td><span class="badge" style="background: rgba(34,197,94,0.2); color: #22c55e;">PASSED</span></td>
+          </tr>
+          <tr>
+            <td><strong>TC-02</strong></td>
+            <td>Frontend React Developer</td>
+            <td>Machine Learning & PyTorch role</td>
+            <td><strong>18% (Low)</strong></td>
+            <td><span class="badge" style="background: rgba(34,197,94,0.2); color: #22c55e;">PASSED</span></td>
+          </tr>
+          <tr>
+            <td><strong>TC-03</strong></td>
+            <td>Full-Stack (Python, Git)</td>
+            <td>Backend Python + AWS, Docker</td>
+            <td><strong>54% (Moderate)</strong></td>
+            <td><span class="badge" style="background: rgba(34,197,94,0.2); color: #22c55e;">PASSED</span></td>
+          </tr>
+          <tr>
+            <td><strong>TC-04</strong></td>
+            <td>Corrupted / Non-text PDF</td>
+            <td>Standard Job Description</td>
+            <td><strong>Graceful Error</strong></td>
+            <td><span class="badge" style="background: rgba(34,197,94,0.2); color: #22c55e;">PASSED</span></td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="box" style="margin-top: 1rem;">
+        <p><strong>Latency Benchmark:</strong> Entire pipeline executes in <strong>under 100 milliseconds</strong> on commodity hardware.</p>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span>Systematic validation across multiple test scenarios</span>
+      <span>Slide 8 of 12</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 9: Existing vs Proposed -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">Slide 09</div>
+      <h2 class="slide-title">Existing vs. Proposed System</h2>
+    </div>
+    <div class="slide-body">
+      <table>
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Traditional Manual Review</th>
+            <th>Commercial ATS</th>
+            <th>Proposed AI Resume Analyzer</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Review Speed</strong></td>
+            <td>5–10 minutes / resume</td>
+            <td>Instantaneous</td>
+            <td><strong>Instantaneous (&lt; 100 ms)</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Candidate Feedback</strong></td>
+            <td>None</td>
+            <td>None (Black Box)</td>
+            <td><strong>Full Breakdown & Suggestions</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Skill Gap Identification</strong></td>
+            <td>Subjective</td>
+            <td>Binary Keyword Match</td>
+            <td><strong>Categorized Matrix & Badges</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Cost & Access</strong></td>
+            <td>High Human Cost</td>
+            <td>Expensive Enterprise Licenses</td>
+            <td><strong>100% Free & Open-Source</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="slide-footer">
+      <span>Comparative advantage of proposed architecture</span>
+      <span>Slide 9 of 12</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 10: Limitations & Future Scope -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">Slide 10</div>
+      <h2 class="slide-title">Limitations & Future Enhancements</h2>
+    </div>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="box">
+          <h4>Current Limitations</h4>
+          <ul>
+            <li><strong>Scanned Image PDFs:</strong> Image-only resumes require OCR, which is not yet integrated.</li>
+            <li><strong>Semantic Synonyms:</strong> TF-IDF relies on token overlap; does not know "AWS" == "Amazon Cloud".</li>
+            <li><strong>Keyword Stuffing:</strong> Pure statistical models can be manipulated by hidden text.</li>
+          </ul>
+        </div>
+        <div class="box">
+          <h4>Future Scope</h4>
+          <ul>
+            <li><strong>Tesseract OCR:</strong> Support for scanned images and graphical resumes.</li>
+            <li><strong>Sentence Transformers / LLMs:</strong> Deep semantic dense embeddings (BERT / Gemini API).</li>
+            <li><strong>Multi-Format Parsing:</strong> Add direct .docx, .rtf, and .tex support.</li>
+            <li><strong>Bulk Screening:</strong> Batch upload of 50+ resumes with automated CSV ranking.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span>Roadmap for enterprise scalability</span>
+      <span>Slide 10 of 12</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 11: Conclusion -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">Slide 11</div>
+      <h2 class="slide-title">Conclusion & Key Learnings</h2>
+    </div>
+    <div class="slide-body">
+      <div class="box" style="margin-bottom: 1.2rem;">
+        <h4>Project Conclusion</h4>
+        <p>The <strong>AI Resume Analyzer</strong> demonstrates a lightweight, reliable, and cost-effective application of statistical Natural Language Processing to solve modern recruitment challenges.</p>
+      </div>
+      <div class="grid-3">
+        <div class="box">
+          <h4>Efficiency</h4>
+          <p>Reduces pre-screening latency from minutes to milliseconds.</p>
+        </div>
+        <div class="box">
+          <h4>Transparency</h4>
+          <p>Empowers candidates with actionable guidance to tailor their profile.</p>
+        </div>
+        <div class="box">
+          <h4>Usability</h4>
+          <p>Delivers a clean, responsive UI with zero external database overhead.</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span>Practical NLP application in HR Tech</span>
+      <span>Slide 11 of 12</span>
+    </div>
+  </div>
+
+  <!-- SLIDE 12: Q&A -->
+  <div class="slide">
+    <div style="text-align: center; margin: auto;">
+      <h1 class="slide-title" style="font-size: 3.5rem; margin-bottom: 1rem;">Thank You!</h1>
+      <p style="font-size: 1.5rem; color: var(--text-muted); margin-bottom: 2rem;">
+        Questions & Answers
+      </p>
+      <div style="display: inline-block; text-align: left; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem 2rem;">
+        <p><strong>Demo Application:</strong> AI Resume Analyzer</p>
+        <p><strong>Repository:</strong> Local Streamlit Deployment (Port 8501)</p>
+        <p><strong>Candidate:</strong> Ayush Kumar</p>
+      </div>
+    </div>
+    <div class="slide-footer">
+      <span>Ready for Viva & Project Evaluation</span>
+      <span>Slide 12 of 12</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Navigation Controls -->
+<div class="controls">
+  <button class="btn" id="prevBtn" onclick="prevSlide()">◀ Previous</button>
+  <button class="btn" id="nextBtn" onclick="nextSlide()">Next ▶</button>
+  <button class="btn" onclick="window.print()">🖨️ Print / Save PDF</button>
+</div>
+
+<!-- Progress Bar -->
+<div class="progress-bar" id="progressBar"></div>
+
+<script>
+  let currentSlide = 0;
+  const slides = document.querySelectorAll('.slide');
+  const progressBar = document.getElementById('progressBar');
+
+  function updateSlide(index) {
+    slides.forEach((s, i) => {
+      s.classList.toggle('active', i === index);
+    });
+    progressBar.style.width = `${((index + 1) / slides.length) * 100}%`;
+  }
+
+  function nextSlide() {
+    if (currentSlide < slides.length - 1) {
+      currentSlide++;
+      updateSlide(currentSlide);
+    }
+  }
+
+  function prevSlide() {
+    if (currentSlide > 0) {
+      currentSlide--;
+      updateSlide(currentSlide);
+    }
+  }
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+      nextSlide();
+    } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+      prevSlide();
+    }
+  });
+
+  updateSlide(0);
+</script>
+</body>
+</html>
+

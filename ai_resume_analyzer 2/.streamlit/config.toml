@@ -1,0 +1,11 @@
+[global]
+showWarningOnDirectExecution = false
+
+[browser]
+gatherUsageStats = false
+
+[server]
+headless = false
+showEmailPrompt = false
+fileWatcherType = "poll"
+
